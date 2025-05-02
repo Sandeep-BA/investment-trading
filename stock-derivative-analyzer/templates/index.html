@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Stock/Index Analyzer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/css/select2.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      background: linear-gradient(135deg,#f0f4f8 0%,#e9eafc 100%);
+      color: #222;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+    }
+    .container {
+      background: #fff;
+      margin: 40px auto;
+      max-width: 600px;
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(60,72,100,0.15);
+      padding: 32px 24px 32px 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-weight: 700;
+      color: #1a365d;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+      font-size: 2.2rem;
+    }
+    .input-form {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+    .input-form label {
+      font-weight: 600;
+      color: #394867;
+      margin-bottom: 6px;
+      text-align: left;
+    }
+    .select2-container {
+      width: 100% !important;
+    }
+    .select2-selection--single, .select2-selection--multiple {
+      min-height: 44px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      font-size: 1rem;
+    }
+    .select2-selection__rendered {
+      color: #394867;
+      line-height: 1.5;
+    }
+    .select2-selection__arrow {
+      height: 44px !important;
+    }
+    .input-form button {
+      margin-top: 8px;
+      padding: 13px 0;
+      background: linear-gradient(90deg,#3b82f6 0%,#6366f1 100%);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 2px 8px rgba(60,72,100,0.07);
+    }
+    .input-form button:hover {
+      background: linear-gradient(90deg,#2563eb 0%,#7c3aed 100%);
+      transform: translateY(-2px) scale(1.01);
+    }
+    .section {
+      width: 100%;
+      background: #f7fafc;
+      border-radius: 14px;
+      padding: 20px 16px;
+      margin-top: 24px;
+      box-shadow: 0 2px 8px rgba(60,72,100,0.04);
+    }
+    .section h2 {
+      color: #1e293b;
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    #algo-plot {
+      max-width: 100%;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(100,100,120,0.07);
+      border: 1px solid #e0e0e0;
+      margin-top: 10px;
+    }
+    .signals-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .signal {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 1rem;
+      border: 1.5px solid;
+      width: fit-content;
+      margin: 0 auto;
+    }
+    .buy-signal {
+      background: #e6f4ec;
+      color: #1a7e43;
+      border-color: #c6edda;
+    }
+    .sell-signal {
+      background: #fceeee;
+      color: #a93333;
+      border-color: #fcd4d4;
+    }
+    .error {
+      color: #e74c3c;
+      font-weight: 600;
+      margin-top: 16px;
+      padding: 12px;
+      background: #fff0f0;
+      border-radius: 8px;
+      border: 1.5px solid #f8d7da;
+      text-align: center;
+    }
+    /* Loading spinner */
+    .spinner {
+      display: none;
+      margin: 24px auto;
+      width: 48px;
+      height: 48px;
+      border: 5px solid #e0e7ef;
+      border-top: 5px solid #6366f1;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg);}
+      100% { transform: rotate(360deg);}
+    }
+    @media (max-width: 600px) {
+      .container {padding: 18px 5px;}
+      .section {padding: 13px 4px;}
+      h1 {font-size: 1.4rem;}
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Stock/Index Analyzer</h1>
+  <form class="input-form" onsubmit="event.preventDefault(); fetchAndDisplay();">
+    <div>
+      <label for="index-selector">Select Index</label>
+      <select id="index-selector" name="index-selector"></select>
+    </div>
+    <div id="stock-selector-container" style="display:none;">
+      <label for="stock-selector">Select Stock</label>
+      <select id="stock-selector" name="stock-selector"></select>
+    </div>
+    <div>
+      <label for="algorithm-selector">Select Algorithms</label>
+      <select id="algorithm-selector" name="algorithm-selector" multiple="multiple" style="width:100%;">
+        <option value="sma">Simple Moving Average (SMA)</option>
+        <option value="ema">Exponential Moving Average (EMA)</option>
+        <option value="rsi">Relative Strength Index (RSI)</option>
+        <option value="macd">MACD</option>
+        <option value="bollinger">Bollinger Bands</option>
+        <option value="adx">Average Directional Index (ADX)</option>
+        <option value="stochastic">Stochastic Oscillator</option>
+        <option value="cci">Commodity Channel Index (CCI)</option>
+        <option value="obv">On-Balance Volume (OBV)</option>
+      </select>
+    </div>
+    <button type="submit">Analyze</button>
+  </form>
+
+  <div class="spinner" id="spinner"></div>
+
+  <div id="plot-container" class="section" style="display:none;">
+    <h2>Historical Trend with Selected Algorithms</h2>
+    <img id="algo-plot" src="" alt="Algorithm Plot">
+  </div>
+
+  <div id="signals-container" class="section" style="display:none;">
+    <h2>Signals</h2>
+    <div class="signals-list" id="signals"></div>
+  </div>
+
+  <div class="error" id="error-message" style="display:none;"></div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.1.0-rc.0/js/select2.min.js"></script>
+<script>
+  $(document).ready(function() {
+    $('#index-selector').select2({
+      placeholder: 'Select an Index',
+      data: [
+        { id: 'NIFTY', text: 'Nifty 50' },
+        { id: 'BANKNIFTY', text: 'Nifty Bank' },
+        { id: 'SENSEX', text: 'Sensex' }
+      ],
+      allowClear: true
+    }).on('change', function() {
+      const selectedIndex = $(this).val();
+      const stockSelectorContainer = $('#stock-selector-container');
+      const stockSelector = $('#stock-selector');
+      stockSelector.empty().trigger('change');
+      if (selectedIndex === 'NIFTY') {
+        stockSelectorContainer.show();
+        stockSelector.select2({
+          placeholder: 'Select a Nifty 50 Stock',
+          data: [
+            { id: 'ADANIENT.NS', text: 'Adani Enterprises' },
+            { id: 'ADANIPORTS.NS', text: 'Adani Ports' },
+            { id: 'APOLLOHOSP.NS', text: 'Apollo Hospitals' },
+            { id: 'ASIANPAINT.NS', text: 'Asian Paints' },
+            { id: 'AXISBANK.NS', text: 'Axis Bank' },
+            { id: 'BAJAJ-AUTO.NS', text: 'Bajaj Auto' },
+            { id: 'BAJFINANCE.NS', text: 'Bajaj Finance' },
+            { id: 'BAJAJFINSV.NS', text: 'Bajaj Finserv' },
+            { id: 'BHARTIARTL.NS', text: 'Bharti Airtel' },
+            { id: 'BPCL.NS', text: 'BPCL' },
+            { id: 'BRITANNIA.NS', text: 'Britannia' },
+            { id: 'CIPLA.NS', text: 'Cipla' },
+            { id: 'COALINDIA.NS', text: 'Coal India' },
+            { id: 'DIVISLAB.NS', text: 'Divis Labs' },
+            { id: 'DRREDDY.NS', text: 'Dr. Reddy\'s Labs' },
+            { id: 'EICHERMOT.NS', text: 'Eicher Motors' },
+            { id: 'GAIL.NS', text: 'GAIL' },
+            { id: 'GRASIM.NS', text: 'Grasim Industries' },
+            { id: 'HCLTECH.NS', text: 'HCL Technologies' },
+            { id: 'HDFC.NS', text: 'HDFC' },
+            { id: 'HDFCBANK.NS', text: 'HDFC Bank' },
+            { id: 'HEROMOTOCO.NS', text: 'Hero MotoCorp' },
+            { id: 'HINDALCO.NS', text: 'Hindalco' },
+            { id: 'HINDUNILVR.NS', text: 'Hindustan Unilever' },
+            { id: 'ICICIBANK.NS', text: 'ICICI Bank' },
+            { id: 'INDUSINDBK.NS', text: 'IndusInd Bank' },
+            { id: 'INFY.NS', text: 'Infosys' },
+            { id: 'IOC.NS', text: 'Indian Oil Corp' },
+            { id: 'ITC.NS', text: 'ITC' },
+            { id: 'JSWSTEEL.NS', text: 'JSW Steel' },
+            { id: 'KOTAKBANK.NS', text: 'Kotak Mahindra Bank' },
+            { id: 'LTIM.NS', text: 'LTIMindtree' },
+            { id: 'LT.NS', text: 'Larsen & Toubro' },
+            { id: 'M&M.NS', text: 'Mahindra & Mahindra' },
+            { id: 'MARUTI.NS', text: 'Maruti Suzuki' },
+            { id: 'NESTLEIND.NS', text: 'Nestle India' },
+            { id: 'NTPC.NS', text: 'NTPC' },
+            { id: 'ONGC.NS', text: 'ONGC' },
+            { id: 'POWERGRID.NS', text: 'Power Grid Corp' },
+            { id: 'RELIANCE.NS', text: 'Reliance Industries' },
+            { id: 'SBILIFE.NS', text: 'SBI Life Insurance' },
+            { id: 'SBIN.NS', text: 'State Bank of India' },
+            { id: 'SHREECEM.NS', text: 'Shree Cement' },
+            { id: 'SUNPHARMA.NS', text: 'Sun Pharmaceutical' },
+            { id: 'TATACHEM.NS', text: 'Tata Chemicals' },
+            { id: 'TATACONSUM.NS', text: 'Tata Consumer Products' },
+            { id: 'TATAMOTORS.NS', text: 'Tata Motors' },
+            { id: 'TATASTEEL.NS', text: 'Tata Steel' },
+            { id: 'TCS.NS', text: 'Tata Consultancy Services' },
+            { id: 'TECHM.NS', text: 'Tech Mahindra' },
+            { id: 'TITAN.NS', text: 'Titan Company' },
+            { id: 'ULTRACEMCO.NS', text: 'UltraTech Cement' },
+            { id: 'UPL.NS', text: 'UPL' },
+            { id: 'WIPRO.NS', text: 'Wipro' }
+          ],
+          allowClear: true
+        });
+      } else if (selectedIndex === 'BANKNIFTY') {
+        stockSelectorContainer.show();
+        stockSelector.select2({
+          placeholder: 'Select a Bank Nifty Stock',
+          data: [
+            { id: 'HDFCBANK.NS', text: 'HDFC Bank' },
+            { id: 'ICICIBANK.NS', text: 'ICICI Bank' },
+            { id: 'AXISBANK.NS', text: 'Axis Bank' },
+            { id: 'SBIN.NS', text: 'State Bank of India' },
+            { id: 'KOTAKBANK.NS', text: 'Kotak Mahindra Bank' },
+            { id: 'INDUSINDBK.NS', text: 'IndusInd Bank' },
+            { id: 'BANDHANBNK.NS', text: 'Bandhan Bank' },
+            { id: 'FEDERALBNK.NS', text: 'Federal Bank' },
+            { id: 'IDFCFIRSTB.NS', text: 'IDFC First Bank' },
+            { id: 'PNB.NS', text: 'Punjab National Bank' },
+            { id: 'BANKBARODA.NS', text: 'Bank of Baroda' },
+            { id: 'CANBK.NS', text: 'Canara Bank' }
+          ],
+          allowClear: true
+        });
+      } else if (selectedIndex === 'SENSEX') {
+        stockSelectorContainer.show();
+        stockSelector.select2({
+          placeholder: 'Select a Sensex Stock',
+          data: [
+            { id: 'RELIANCE.NS', text: 'Reliance Industries' },
+            { id: 'TCS.NS', text: 'Tata Consultancy Services' },
+            { id: 'HDFCBANK.NS', text: 'HDFC Bank' },
+            { id: 'INFY.NS', text: 'Infosys' },
+            { id: 'ICICIBANK.NS', text: 'ICICI Bank' },
+            { id: 'HINDUNILVR.NS', text: 'Hindustan Unilever' },
+            { id: 'SBIN.NS', text: 'State Bank of India' },
+            { id: 'BHARTIARTL.NS', text: 'Bharti Airtel' },
+            { id: 'KOTAKBANK.NS', text: 'Kotak Mahindra Bank' },
+            { id: 'LT.NS', text: 'Larsen & Toubro' },
+            { id: 'AXISBANK.NS', text: 'Axis Bank' },
+            { id: 'MARUTI.NS', text: 'Maruti Suzuki' },
+            { id: 'ITC.NS', text: 'ITC' },
+            { id: 'HCLTECH.NS', text: 'HCL Technologies' },
+            { id: 'BAJFINANCE.NS', text: 'Bajaj Finance' },
+            { id: 'ASIANPAINT.NS', text: 'Asian Paints' },
+            { id: 'NESTLEIND.NS', text: 'Nestle India' },
+            { id: 'TATASTEEL.NS', text: 'Tata Steel' },
+            { id: 'M&M.NS', text: 'Mahindra & Mahindra' },
+            { id: 'BAJAJ-AUTO.NS', text: 'Bajaj Auto' },
+            { id: 'TITAN.NS', text: 'Titan Company' },
+            { id: 'ULTRACEMCO.NS', text: 'UltraTech Cement' },
+            { id: 'SUNPHARMA.NS', text: 'Sun Pharmaceutical' },
+            { id: 'WIPRO.NS', text: 'Wipro' },
+            { id: 'POWERGRID.NS', text: 'Power Grid Corp' },
+            { id: 'NTPC.NS', text: 'NTPC' },
+            { id: 'TATAMOTORS.NS', text: 'Tata Motors' },
+            { id: 'JSWSTEEL.NS', text: 'JSW Steel' },
+            { id: 'HDFC.NS', text: 'HDFC' }
+          ],
+          allowClear: true
+        });
+      } else {
+        stockSelectorContainer.hide();
+        stockSelector.empty().trigger('change');
+      }
+    });
+
+    $('#algorithm-selector').select2({
+      placeholder: 'Select one or more algorithms',
+      allowClear: true
+    });
+
+    $('#index-selector').val(null).trigger('change');
+  });
+
+  async function fetchAndDisplay() {
+    const indexSelector = $('#index-selector');
+    const stockSelector = $('#stock-selector');
+    const algorithmSelector = $('#algorithm-selector');
+    let symbol = '';
+
+    if (indexSelector.val() === 'NIFTY') {
+      symbol = stockSelector.val() || '^NSEI';
+    } else if (indexSelector.val() === 'BANKNIFTY') {
+      symbol = stockSelector.val() || '^NSEBANK';
+    } else if (indexSelector.val() === 'SENSEX') {
+      symbol = stockSelector.val() || '^BSESN';
+    } else {
+      showError('Please select an index.');
+      return;
+    }
+
+    if (!symbol) {
+      showError('Please select an index and/or a stock.');
+      return;
+    }
+
+    const selectedAlgorithms = algorithmSelector.val();
+    if (!selectedAlgorithms || selectedAlgorithms.length === 0) {
+      showError('Please select at least one algorithm.');
+      return;
+    }
+    const algorithmsParam = selectedAlgorithms.join(',');
+
+    showSpinner(true);
+    hideError();
+    hidePlot();
+    hideSignals();
+
+    try {
+      const response = await fetch(`/analyze?symbol=${encodeURIComponent(symbol)}&algorithms=${encodeURIComponent(algorithmsParam)}`);
+      const data = await response.json();
+
+      if (data.error) {
+        showError(data.error);
+        showSpinner(false);
+        return;
+      }
+
+      document.getElementById('algo-plot').src = `data:image/png;base64,${data.plot_data}`;
+      showPlot();
+
+      // Clear previous signals
+      const signalsDiv = document.getElementById('signals');
+      signalsDiv.innerHTML = '';
+      if (data.signals && data.signals.length > 0) {
+        showSignals();
+        data.signals.forEach(signal => {
+          const div = document.createElement('div');
+          div.className = `signal ${signal.type.toLowerCase()}-signal`;
+          div.textContent = `${signal.type} signal on ${signal.date}`;
+          signalsDiv.appendChild(div);
+        });
+      } else {
+        hideSignals();
+      }
+    } catch (e) {
+      showError('An error occurred. Please try again.');
+    }
+    showSpinner(false);
+  }
+
+  function showSpinner(show) {
+    document.getElementById('spinner').style.display = show ? 'block' : 'none';
+  }
+  function showPlot() {
+    document.getElementById('plot-container').style.display = 'block';
+  }
+  function hidePlot() {
+    document.getElementById('plot-container').style.display = 'none';
+  }
+  function showSignals() {
+    document.getElementById('signals-container').style.display = 'block';
+  }
+  function hideSignals() {
+    document.getElementById('signals-container').style.display = 'none';
+  }
+  function showError(msg) {
+    const err = document.getElementById('error-message');
+    err.textContent = msg;
+    err.style.display = 'block';
+  }
+  function hideError() {
+    const err = document.getElementById('error-message');
+    err.textContent = '';
+    err.style.display = 'none';
+  }
+</script>
+</body>
+</html>
