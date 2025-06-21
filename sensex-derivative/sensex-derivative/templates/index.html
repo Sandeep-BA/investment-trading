@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sandeep's Trading Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px; /* Increased max-width for more content */
+            margin: 2rem auto;
+            padding: 1.5rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e0e0e0;
+        }
+        .header {
+            background-color: #1a202c;
+            color: #fff;
+            padding: 1rem 1.5rem;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .status-badge {
+            padding: 0.3rem 0.8rem;
+            border-radius: 9999px; /* Tailwind rounded-full */
+            font-weight: 600;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+        }
+        .status-running {
+            background-color: #4CAF50; /* Green */
+            color: white;
+        }
+        .status-stopped {
+            background-color: #F44336; /* Red */
+            color: white;
+        }
+        .status-initializing {
+            background-color: #FFC107; /* Amber */
+            color: #333;
+        }
+        .status-market-closed {
+            background-color: #9E9E9E; /* Grey */
+            color: white;
+        }
+        .card {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 1.25rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border: 1px solid #f0f0f0;
+        }
+        .metric-value {
+            font-size: 1.875rem; /* text-3xl */
+            font-weight: 700; /* font-bold */
+        }
+        .log-container, .table-container {
+            background-color: #2d3748; /* Dark grey for logs/tables */
+            color: #e2e8f0; /* Light text */
+            padding: 1rem;
+            border-radius: 8px;
+            height: 300px;
+            overflow-y: scroll;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 0.875rem;
+            border: 1px solid #4a5568;
+        }
+        .log-entry {
+            margin-bottom: 0.25rem;
+            word-wrap: break-word;
+        }
+        .log-info { color: #90CAF9; } /* Light blue */
+        .log-warning { color: #FFD54F; } /* Amber */
+        .log-error { color: #EF5350; } /* Red */
+        .log-critical { color: #D32F2F; font-weight: bold; } /* Dark Red, bold */
+        .log-debug { color: #B0BEC5; } /* Light grey */
+
+        /* Table specific styles */
+        .table-header {
+            background-color: #4a5568; /* Darker header for tables */
+            color: #e2e8f0;
+            text-align: left;
+            padding: 0.75rem 1.5rem;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .table-row-dark {
+            background-color: #2d3748;
+        }
+        .table-row-light {
+            background-color: #4a5568;
+        }
+        .table-cell {
+            padding: 0.75rem 1.5rem;
+            vertical-align: top;
+            border-bottom: 1px solid #667e96; /* Lighter border for readability */
+        }
+        .text-green-pnl { color: #34D399; } /* Tailwind green-400 */
+        .text-red-pnl { color: #EF4444; } /* Tailwind red-500 */
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 class="text-3xl font-bold">Sandeep's Trading Room</h1>
+        <span id="bot-status" class="status-badge"></span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Initial Capital</h2>
+            <div id="initial-capital" class="metric-value text-green-700">Loading...</div>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Overall Current P&L</h2>
+            <div id="overall-current-pnl" class="metric-value text-blue-700">Loading...</div>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Daily P&L</h2>
+            <div id="overall-daily-pnl" class="metric-value text-purple-700">Loading...</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Funds Details</h2>
+            <div class="text-sm">
+                <p><strong>Available Margin:</strong> <span id="available-margin" class="font-medium text-blue-600">Loading...</span></p>
+                <p><strong>Used Margin:</strong> <span id="used-margin" class="font-medium text-gray-600">Loading...</span></p>
+                <p><strong>Unrealized P&L:</strong> <span id="unrealised-pnl" class="font-medium">Loading...</span></p>
+                <p><strong>Realized P&L:</strong> <span id="realised-pnl" class="font-medium">Loading...</span></p>
+            </div>
+        </div>
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Bot Settings</h2>
+            <div class="text-sm">
+                <p><strong>Dry Run Mode:</strong> <span id="dry-run-status" class="font-medium">Loading...</span></p>
+                <p><strong>Risk Per Trade:</strong> <span id="risk-per-trade" class="font-medium">Loading...</span></p>
+                <p><strong>Max Daily Loss:</strong> <span id="max-daily-loss" class="font-medium">Loading...</span></p>
+                <p><strong>Risk:Reward Ratio:</strong> <span id="risk-reward-ratio" class="font-medium">Loading...</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-2">Current Positions (Simulated in Dry Run)</h2>
+        <div class="table-container p-0 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full table-fixed">
+                    <thead class="sticky top-0 z-10">
+                    <tr>
+                        <th scope="col" class="table-header w-1/5">Instrument</th>
+                        <th scope="col" class="table-header w-1/10">Qty</th>
+                        <th scope="col" class="table-header w-1/10">Avg Price</th>
+                        <th scope="col" class="table-header w-1/10">LTP</th>
+                        <th scope="col" class="table-header w-1/10">Side</th>
+                        <th scope="col" class="table-header w-1/10">SL</th>
+                        <th scope="col" class="table-header w-1/10">TP</th>
+                        <th scope="col" class="table-header w-1/10">P&L</th>
+                    </tr>
+                    </thead>
+                    <tbody id="positions-table-body" class="divide-y divide-gray-700">
+                    <tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No positions</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div>
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Order Book (Simulated in Dry Run)</h2>
+            <div class="table-container p-0 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-fixed">
+                        <thead class="sticky top-0 z-10">
+                        <tr>
+                            <th scope="col" class="table-header w-1/4">Order ID</th>
+                            <th scope="col" class="table-header w-1/4">Instrument</th>
+                            <th scope="col" class="table-header w-1/4">Type</th>
+                            <th scope="col" class="table-header w-1/4">Status</th>
+                        </tr>
+                        </thead>
+                        <tbody id="orders-table-body" class="divide-y divide-gray-700">
+                        <tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No orders or not implemented</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div>
+            <h2 class="text-lg font-semibold text-gray-700 mb-2">Trade Book (Simulated in Dry Run)</h2>
+            <div class="table-container p-0 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-fixed">
+                        <thead class="sticky top-0 z-10">
+                        <tr>
+                            <th scope="col" class="table-header w-1/4">Trade ID</th>
+                            <th scope="col" class="table-header w-1/4">Instrument</th>
+                            <th scope="col" class="table-header w-1/4">Qty</th>
+                            <th scope="col" class="table-header w-1/4">Price</th>
+                        </tr>
+                        </thead>
+                        <tbody id="trades-table-body" class="divide-y divide-gray-700">
+                        <tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No trades or not implemented</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mb-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-2">Bot Logs</h2>
+        <div id="bot-logs" class="log-container">
+            Loading logs...
+        </div>
+    </div>
+
+    <div class="text-center text-gray-500 text-sm mt-8">
+        Last Updated: <span id="last-updated"></span>
+    </div>
+</div>
+
+<script>
+    function fetchBotStatus() {
+        // Use absolute URL for the Flask endpoint
+        fetch('http://127.0.0.1:5000/status')
+            .then(response => response.json())
+            .then(data => {
+                // Overall Metrics
+                document.getElementById('initial-capital').innerText = 'INR ' + data.capital_details.initial_capital.toFixed(2);
+
+                const overallCurrentPnlElement = document.getElementById('overall-current-pnl');
+                overallCurrentPnlElement.innerText = 'INR ' + data.overall_current_pnl.toFixed(2);
+                overallCurrentPnlElement.style.color = data.overall_current_pnl >= 0 ? '#10B981' : '#EF4444';
+
+                const overallDailyPnlElement = document.getElementById('overall-daily-pnl');
+                overallDailyPnlElement.innerText = 'INR ' + data.overall_daily_pnl.toFixed(2);
+                overallDailyPnlElement.style.color = data.overall_daily_pnl >= 0 ? '#10B981' : '#EF4444';
+
+                // Funds Details
+                document.getElementById('available-margin').innerText = 'INR ' + data.capital_details.available_margin.toFixed(2);
+                document.getElementById('used-margin').innerText = 'INR ' + data.capital_details.used_margin.toFixed(2);
+
+                const unrealisedPnlElement = document.getElementById('unrealised-pnl');
+                unrealisedPnlElement.innerText = 'INR ' + data.capital_details.unrealised_pnl.toFixed(2);
+                unrealisedPnlElement.style.color = data.capital_details.unrealised_pnl >= 0 ? '#10B981' : '#EF4444';
+
+                const realisedPnlElement = document.getElementById('realised-pnl');
+                realisedPnlElement.innerText = 'INR ' + data.capital_details.realised_pnl.toFixed(2);
+                realisedPnlElement.style.color = data.capital_details.realised_pnl >= 0 ? '#10B981' : '#EF4444';
+
+                // Bot Settings
+                document.getElementById('dry-run-status').innerText = data.dry_run_mode ? 'ENABLED' : 'DISABLED';
+                document.getElementById('risk-per-trade').innerText = (data.risk_per_trade_percent * 100).toFixed(2) + '%';
+                document.getElementById('max-daily-loss').innerText = (data.max_daily_loss_percent * 100).toFixed(2) + '%';
+                document.getElementById('risk-reward-ratio').innerText = data.risk_reward_ratio.toFixed(1) + ':1';
+
+
+                document.getElementById('last-updated').innerText = new Date(data.last_updated).toLocaleString();
+
+
+                const statusBadge = document.getElementById('bot-status');
+                statusBadge.innerText = data.status;
+                statusBadge.className = 'status-badge'; // Reset classes
+                if (data.status === 'Running') {
+                    statusBadge.classList.add('status-running');
+                } else if (data.status.includes('Stopped') || data.status.includes('Exiting')) {
+                    statusBadge.classList.add('status-stopped');
+                } else if (data.status.includes('Initializing')) {
+                    statusBadge.classList.add('status-initializing');
+                } else if (data.status.includes('Market Closed')) {
+                     statusBadge.classList.add('status-market-closed');
+                }
+
+                const positionsTableBody = document.getElementById('positions-table-body');
+                positionsTableBody.innerHTML = ''; // Clear existing rows
+                if (data.current_positions_for_ui && data.current_positions_for_ui.length > 0) {
+                    data.current_positions_for_ui.forEach((pos, index) => {
+                        const row = positionsTableBody.insertRow();
+                        row.className = index % 2 === 0 ? 'table-row-dark' : 'table-row-light'; // Zebra striping
+
+                        const pnlClass = pos.pnl_per_position >= 0 ? 'text-green-pnl' : 'text-red-pnl';
+
+                        row.innerHTML = `
+                            <td class="table-cell">${pos.instrument_key || 'N/A'}</td>
+                            <td class="table-cell">${pos.quantity || 0}</td>
+                            <td class="table-cell">${(pos.avg_price || 0).toFixed(2)}</td>
+                            <td class="table-cell">${(pos.ltp || 0).toFixed(2)}</td>
+                            <td class="table-cell font-semibold ${pos.side === 'BUY' ? 'text-green-600' : 'text-red-600'}">${pos.side || 'N/A'}</td>
+                            <td class="table-cell">${(pos.stop_loss_price || 0).toFixed(2)}</td>
+                            <td class="table-cell">${(pos.take_profit_price || 0).toFixed(2)}</td>
+                            <td class="table-cell ${pnlClass}">${(pos.pnl_per_position || 0).toFixed(2)}</td>
+                        `;
+                    });
+                } else {
+                    positionsTableBody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No positions</td></tr>';
+                }
+
+                const ordersTableBody = document.getElementById('orders-table-body');
+                ordersTableBody.innerHTML = ''; // Clear existing rows
+                if (data.orders_for_ui && data.orders_for_ui.length > 0) {
+                     data.orders_for_ui.forEach((order, index) => {
+                        const row = ordersTableBody.insertRow();
+                        row.className = index % 2 === 0 ? 'table-row-dark' : 'table-row-light';
+                        row.innerHTML = `
+                            <td class="table-cell">${order.order_id || 'N/A'}</td>
+                            <td class="table-cell">${order.instrument_key || 'N/A'}</td>
+                            <td class="table-cell">${order.type || 'N/A'}</td>
+                            <td class="table-cell">${order.status || 'N/A'}</td>
+                        `;
+                    });
+                } else {
+                    ordersTableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No orders or not implemented</td></tr>';
+                }
+
+                const tradesTableBody = document.getElementById('trades-table-body');
+                tradesTableBody.innerHTML = ''; // Clear existing rows
+                if (data.trades_for_ui && data.trades_for_ui.length > 0) {
+                     data.trades_for_ui.forEach((trade, index) => {
+                        const row = tradesTableBody.insertRow();
+                        row.className = index % 2 === 0 ? 'table-row-dark' : 'table-row-light';
+                        row.innerHTML = `
+                            <td class="table-cell">${trade.trade_id || 'N/A'}</td>
+                            <td class="table-cell">${trade.instrument_key || 'N/A'}</td>
+                            <td class="table-cell">${trade.quantity || 0}</td>
+                            <td class="table-cell">${(trade.price || 0).toFixed(2)}</td>
+                        `;
+                    });
+                } else {
+                    tradesTableBody.innerHTML = '<tr><td colspan="4" class="px-6 py-4 whitespace-nowrap text-sm text-gray-400 text-center">No trades or not implemented</td></tr>';
+                }
+
+
+                const botLogs = document.getElementById('bot-logs');
+                // Only update logs if new logs are available to avoid re-rendering entire list constantly
+                if (data.logs.length > botLogs.children.length) {
+                    const newLogsHtml = data.logs.slice(botLogs.children.length).map(log => {
+                        let logClass = 'log-entry';
+                        if (log.includes('INFO')) logClass += ' log-info';
+                        else if (log.includes('WARNING')) logClass += ' log-warning';
+                        else if (log.includes('ERROR')) logClass += ' log-error';
+                        else if (log.includes('CRITICAL')) logClass += ' log-critical';
+                        else if (log.includes('DEBUG')) logClass += ' log-debug';
+                        return `<div class="${logClass}">${log}</div>`;
+                    }).join('');
+                    botLogs.insertAdjacentHTML('beforeend', newLogsHtml);
+                    botLogs.scrollTop = botLogs.scrollHeight; // Auto-scroll to bottom
+                }
+            })
+            .catch(error => console.error('Error fetching bot status:', error));
+    }
+
+    // Fetch status every 3 seconds for a smoother update
+    setInterval(fetchBotStatus, 3000);
+    // Initial fetch
+    fetchBotStatus();
+</script>
+</body>
+</html>
